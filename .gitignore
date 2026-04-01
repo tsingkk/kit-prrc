@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+
+# Nuitka
+dist/
+*.build/
+*.dist/
+*.onefile-build/
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Cache
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# other
+reference/
