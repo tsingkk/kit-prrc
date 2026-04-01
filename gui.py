@@ -36,6 +36,7 @@ class PipelineResistanceGUI:
         self.root.minsize(1400, 700)
 
         self.component_entries: List[tk.Entry] = []
+        self.component_K_entries: List[tk.Entry] = []
         self.component_K_labels: List[ttk.Label] = []
 
         self.create_scrollbar()
@@ -298,8 +299,11 @@ class PipelineResistanceGUI:
             ttk.Label(comp_inner_frame, text=name, width=12).grid(
                 row=i, column=0, padx=2, pady=1, sticky=tk.W
             )
-            ttk.Label(comp_inner_frame, text=f"{k_value}", width=5).grid(
-                row=i, column=1, padx=2, pady=1
+            k_entry = ttk.Entry(comp_inner_frame, width=6)
+            k_entry.insert(0, f"{k_value}")
+            k_entry.grid(row=i, column=1, padx=2, pady=1)
+            k_entry.bind(
+                "<KeyRelease>", lambda e, idx=i: self.update_K_total_display(idx)
             )
 
             entry = ttk.Entry(comp_inner_frame, width=5)
@@ -309,9 +313,10 @@ class PipelineResistanceGUI:
                 "<KeyRelease>", lambda e, idx=i: self.update_K_total_display(idx)
             )
 
-            total_label = ttk.Label(comp_inner_frame, text="0", width=5)
+            total_label = ttk.Label(comp_inner_frame, text="0", width=6)
             total_label.grid(row=i, column=3, padx=2, pady=1)
 
+            self.component_K_entries.append(k_entry)
             self.component_entries.append(entry)
             self.component_K_labels.append(total_label)
 
@@ -357,7 +362,11 @@ class PipelineResistanceGUI:
 
     def update_K_total_display(self, changed_idx=None):
         total = 0.0
-        for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+        for i in range(len(LOCAL_RESISTANCE_COMPONENTS)):
+            try:
+                k_value = float(self.component_K_entries[i].get() or 0)
+            except ValueError:
+                k_value = 0
             try:
                 count = int(self.component_entries[i].get() or 0)
             except ValueError:
@@ -412,7 +421,7 @@ class PipelineResistanceGUI:
         self.k_tree.column("component", width=90)
         self.k_tree.column("k_value", width=70)
 
-        for item in LOCAL_RESISTANCE_COMPONENTS[:10]:
+        for item in LOCAL_RESISTANCE_COMPONENTS:
             self.k_tree.insert("", "end", values=item)
 
         k_scroll = ttk.Scrollbar(
@@ -571,7 +580,11 @@ class PipelineResistanceGUI:
 
     def get_local_resistance_components(self) -> LocalResistanceData:
         components = []
-        for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+        for i, (name, _) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            try:
+                k_value = float(self.component_K_entries[i].get() or 0)
+            except ValueError:
+                k_value = 0
             try:
                 count = int(self.component_entries[i].get() or 0)
             except ValueError:
@@ -708,9 +721,11 @@ class PipelineResistanceGUI:
         self.include_static_var.set(False)
         self.toggle_input_mode()
 
-        for entry in self.component_entries:
-            entry.delete(0, tk.END)
-            entry.insert(0, "0")
+        for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            self.component_K_entries[i].delete(0, tk.END)
+            self.component_K_entries[i].insert(0, f"{k_value}")
+            self.component_entries[i].delete(0, tk.END)
+            self.component_entries[i].insert(0, "0")
         self.update_K_total_display()
 
         self.lbl_dp_major.config(text="--")
@@ -751,13 +766,15 @@ class PipelineResistanceGUI:
         self.entry_z_out.delete(0, tk.END)
         self.entry_z_out.insert(0, "0")
 
-        for i, entry in enumerate(self.component_entries):
-            entry.delete(0, tk.END)
-            entry.insert(0, "0")
-        self.component_entries[5].delete(0, tk.END)
-        self.component_entries[5].insert(0, "1")
+        for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            self.component_K_entries[i].delete(0, tk.END)
+            self.component_K_entries[i].insert(0, f"{k_value}")
+            self.component_entries[i].delete(0, tk.END)
+            self.component_entries[i].insert(0, "0")
         self.component_entries[0].delete(0, tk.END)
         self.component_entries[0].insert(0, "10")
+        self.component_entries[11].delete(0, tk.END)
+        self.component_entries[11].insert(0, "1")
         self.update_K_total_display()
 
         self.use_flow_rate_var.set(True)
@@ -781,9 +798,11 @@ class PipelineResistanceGUI:
         self.entry_z_out.delete(0, tk.END)
         self.entry_z_out.insert(0, "0")
 
-        for entry in self.component_entries:
-            entry.delete(0, tk.END)
-            entry.insert(0, "0")
+        for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            self.component_K_entries[i].delete(0, tk.END)
+            self.component_K_entries[i].insert(0, f"{k_value}")
+            self.component_entries[i].delete(0, tk.END)
+            self.component_entries[i].insert(0, "0")
         self.update_K_total_display()
 
         self.use_flow_rate_var.set(True)
