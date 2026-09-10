@@ -1,35 +1,81 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# C extensions
+*.so
+
+# Distribution / packaging
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
 venv/
 ENV/
 env/
-.venv/
+env.bak/
+venv.bak/
 
-# Nuitka
-dist/
+# Nuitka & PyInstaller
 *.build/
 *.dist/
 *.onefile-build/
 *.exe
+*.spec
 
-# IDE
+# Testing & Linting
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+*.sublime-project
+*.sublime-workspace
 
-# Cache
-.ruff_cache/
-.mypy_cache/
-.pytest_cache/
-
-# OS
+# Operating System
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# other
+# Project specific
 reference/
+tests/
+src/
+
+# agent相关
+AGENTS.md
+

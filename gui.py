@@ -39,6 +39,15 @@ class PipelineResistanceGUI:
         self.component_K_entries: List[tk.Entry] = []
         self.component_K_labels: List[ttk.Label] = []
 
+        self.lbl_velocity: ttk.Label
+        self.lbl_Re: ttk.Label
+        self.lbl_flow_regime: ttk.Label
+        self.lbl_friction: ttk.Label
+        self.lbl_friction_model: ttk.Label
+        self.lbl_local_method: ttk.Label
+        self.lbl_area: ttk.Label
+        self.lbl_epsilon_D: ttk.Label
+
         self.create_scrollbar()
         self.create_widgets()
         self.set_default_values()
@@ -257,14 +266,57 @@ class PipelineResistanceGUI:
         row += 1
 
         ttk.Separator(param_frame, orient="horizontal").grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=4
         )
+        row += 1
+
+        ttk.Label(param_frame, text="【计算模型】", font=("Arial", 9, "bold")).grid(
+            row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 2)
+        )
+        row += 1
+
+        ttk.Label(param_frame, text="摩擦阻力模型:").grid(
+            row=row, column=0, sticky=tk.W, pady=1
+        )
+        self.friction_model_var = tk.StringVar(value="Churchill (1977全流态推荐)")
+        self.combo_friction = ttk.Combobox(
+            param_frame,
+            textvariable=self.friction_model_var,
+            values=[
+                "Churchill (1977全流态推荐)",
+                "Swamee-Jain (经典工程显式)",
+                "Colebrook-White (高精度隐式迭代)",
+                "Haaland (工程显式)",
+            ],
+            state="readonly",
+            width=17,
+        )
+        self.combo_friction.current(0)
+        self.combo_friction.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=1)
+        row += 1
+
+        ttk.Label(param_frame, text="局部阻力模型:").grid(
+            row=row, column=0, sticky=tk.W, pady=1
+        )
+        self.local_method_var = tk.StringVar(value="Darby 3K (推荐,含粘性与管径修正)")
+        self.combo_local_method = ttk.Combobox(
+            param_frame,
+            textvariable=self.local_method_var,
+            values=[
+                "Darby 3K (推荐,含粘性与管径修正)",
+                "经典 1K常数法 (高湍流参考)",
+            ],
+            state="readonly",
+            width=17,
+        )
+        self.combo_local_method.current(0)
+        self.combo_local_method.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=1)
         row += 1
 
         self.include_static_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            param_frame, text="叠加静压差", variable=self.include_static_var
-        ).grid(row=row, column=0, columnspan=2, sticky=tk.W)
+            param_frame, text="叠加高程静压差", variable=self.include_static_var
+        ).grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=2)
         row += 1
 
         local_frame = ttk.LabelFrame(left_frame, text="局部阻力输入", padding="5")
@@ -449,21 +501,39 @@ class PipelineResistanceGUI:
         )
         row += 1
 
-        ttk.Label(results_frame, text="沿程压降 (Pa):").grid(
+        ttk.Label(results_frame, text="沿程阻力 (Pa):").grid(
             row=row, column=0, sticky=tk.W, pady=1
         )
         self.lbl_dp_major = ttk.Label(results_frame, text="--", width=12, anchor="e")
         self.lbl_dp_major.grid(row=row, column=1, sticky=tk.E, pady=1)
         row += 1
 
-        ttk.Label(results_frame, text="局部压降 (Pa):").grid(
+        ttk.Label(results_frame, text="局部阻力 (Pa):").grid(
             row=row, column=0, sticky=tk.W, pady=1
         )
         self.lbl_dp_minor = ttk.Label(results_frame, text="--", width=12, anchor="e")
         self.lbl_dp_minor.grid(row=row, column=1, sticky=tk.E, pady=1)
         row += 1
 
-        ttk.Label(results_frame, text="静压差 (Pa):").grid(
+        ttk.Label(results_frame, text="摩擦总损失 (Pa):", font=("Arial", 9, "bold")).grid(
+            row=row, column=0, sticky=tk.W, pady=1
+        )
+        self.lbl_dp_friction = ttk.Label(
+            results_frame, text="--", width=12, anchor="e", font=("Arial", 9, "bold")
+        )
+        self.lbl_dp_friction.grid(row=row, column=1, sticky=tk.E, pady=1)
+        row += 1
+
+        ttk.Label(results_frame, text="摩擦总损失 (kPa):").grid(
+            row=row, column=0, sticky=tk.W, pady=1
+        )
+        self.lbl_dp_friction_kpa = ttk.Label(
+            results_frame, text="--", width=12, anchor="e"
+        )
+        self.lbl_dp_friction_kpa.grid(row=row, column=1, sticky=tk.E, pady=1)
+        row += 1
+
+        ttk.Label(results_frame, text="高程静压差 (Pa):").grid(
             row=row, column=0, sticky=tk.W, pady=1
         )
         self.lbl_dp_static = ttk.Label(results_frame, text="--", width=12, anchor="e")
@@ -475,7 +545,7 @@ class PipelineResistanceGUI:
         )
         row += 1
 
-        ttk.Label(results_frame, text="总压降 (Pa):", font=("Arial", 9, "bold")).grid(
+        ttk.Label(results_frame, text="系统总压差 (Pa):", font=("Arial", 9, "bold")).grid(
             row=row, column=0, sticky=tk.W, pady=1
         )
         self.lbl_dp_total = ttk.Label(
@@ -484,7 +554,7 @@ class PipelineResistanceGUI:
         self.lbl_dp_total.grid(row=row, column=1, sticky=tk.E, pady=1)
         row += 1
 
-        ttk.Label(results_frame, text="总压降 (kPa):").grid(
+        ttk.Label(results_frame, text="系统总压差 (kPa):").grid(
             row=row, column=0, sticky=tk.W, pady=1
         )
         self.lbl_dp_total_kpa = ttk.Label(
@@ -508,6 +578,8 @@ class PipelineResistanceGUI:
             ("雷诺数 Re:", "lbl_Re"),
             ("流型:", "lbl_flow_regime"),
             ("摩擦因子 f:", "lbl_friction"),
+            ("摩擦模型:", "lbl_friction_model"),
+            ("局部阻力模型:", "lbl_local_method"),
             ("截面积 A (m²):", "lbl_area"),
             ("相对粗糙度 ε/D:", "lbl_epsilon_D"),
         ]
@@ -630,8 +702,32 @@ class PipelineResistanceGUI:
                 use_flow_rate=use_flow_rate,
             )
             local_resistance = self.get_local_resistance_components()
+
+            friction_idx = self.combo_friction.current()
+            friction_correlations = [
+                "churchill",
+                "swamee_jain",
+                "colebrook_white",
+                "haaland",
+            ]
+            friction_correlation = (
+                friction_correlations[friction_idx]
+                if 0 <= friction_idx < len(friction_correlations)
+                else "churchill"
+            )
+
+            local_idx = self.combo_local_method.current()
+            local_methods = ["darby_3k", "constant_k"]
+            local_method = (
+                local_methods[local_idx]
+                if 0 <= local_idx < len(local_methods)
+                else "darby_3k"
+            )
+
             options = CalculationOptions(
-                include_static_head=self.include_static_var.get()
+                include_static_head=self.include_static_var.get(),
+                friction_correlation=friction_correlation,
+                local_resistance_method=local_method,
             )
 
             result = calc_pressure_drop(
@@ -648,6 +744,8 @@ class PipelineResistanceGUI:
     def display_result(self, result: CalculationResult):
         self.lbl_dp_major.config(text=f"{result.dp_major_Pa:.4f}")
         self.lbl_dp_minor.config(text=f"{result.dp_minor_Pa:.4f}")
+        self.lbl_dp_friction.config(text=f"{result.dp_friction_loss_Pa:.4f}")
+        self.lbl_dp_friction_kpa.config(text=f"{result.dp_friction_loss_kPa:.6f}")
         self.lbl_dp_static.config(text=f"{result.dp_static_Pa:.4f}")
         self.lbl_dp_total.config(text=f"{result.dp_total_Pa:.4f}")
         self.lbl_dp_total_kpa.config(text=f"{result.dp_total_kPa:.6f}")
@@ -664,6 +762,8 @@ class PipelineResistanceGUI:
             text=flow_regime_text.get(result.flow_regime, result.flow_regime)
         )
         self.lbl_friction.config(text=f"{result.friction_factor:.6f}")
+        self.lbl_friction_model.config(text=result.friction_model_used)
+        self.lbl_local_method.config(text=result.local_method_used)
         self.lbl_area.config(text=f"{result.area_m2:.6f}")
         self.lbl_epsilon_D.config(text=f"{result.epsilon_over_D:.6f}")
 
@@ -718,6 +818,8 @@ class PipelineResistanceGUI:
         self.entry_z_out.insert(0, "0")
 
         self.use_flow_rate_var.set(True)
+        self.combo_friction.current(0)
+        self.combo_local_method.current(0)
         self.include_static_var.set(False)
         self.toggle_input_mode()
 
@@ -730,6 +832,8 @@ class PipelineResistanceGUI:
 
         self.lbl_dp_major.config(text="--")
         self.lbl_dp_minor.config(text="--")
+        self.lbl_dp_friction.config(text="--")
+        self.lbl_dp_friction_kpa.config(text="--")
         self.lbl_dp_static.config(text="--")
         self.lbl_dp_total.config(text="--")
         self.lbl_dp_total_kpa.config(text="--")
@@ -737,6 +841,8 @@ class PipelineResistanceGUI:
         self.lbl_Re.config(text="--")
         self.lbl_flow_regime.config(text="--")
         self.lbl_friction.config(text="--")
+        self.lbl_friction_model.config(text="--")
+        self.lbl_local_method.config(text="--")
         self.lbl_area.config(text="--")
         self.lbl_epsilon_D.config(text="--")
 
@@ -765,6 +871,9 @@ class PipelineResistanceGUI:
         self.entry_z_in.insert(0, "0")
         self.entry_z_out.delete(0, tk.END)
         self.entry_z_out.insert(0, "0")
+
+        self.combo_friction.current(0)
+        self.combo_local_method.current(0)
 
         for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
             self.component_K_entries[i].delete(0, tk.END)
@@ -798,11 +907,19 @@ class PipelineResistanceGUI:
         self.entry_z_out.delete(0, tk.END)
         self.entry_z_out.insert(0, "0")
 
+        self.combo_friction.current(0)
+        self.combo_local_method.current(0)
+
         for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
             self.component_K_entries[i].delete(0, tk.END)
             self.component_K_entries[i].insert(0, f"{k_value}")
             self.component_entries[i].delete(0, tk.END)
             self.component_entries[i].insert(0, "0")
+        # 添加 4 个 90° 弯头和 1 个闸阀，便于观察层流下的 Darby 3K 粘性增强效果
+        self.component_entries[0].delete(0, tk.END)
+        self.component_entries[0].insert(0, "4")
+        self.component_entries[8].delete(0, tk.END)
+        self.component_entries[8].insert(0, "1")
         self.update_K_total_display()
 
         self.use_flow_rate_var.set(True)
