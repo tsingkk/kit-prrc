@@ -1,18 +1,18 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-from typing import Optional, List
+from tkinter import messagebox, ttk
+
+from core import calc_pressure_drop
 from models import (
-    PipeData,
-    FluidData,
-    OperatingConditions,
-    LocalResistanceData,
-    LocalResistanceComponent,
+    FITTINGS_3K_DATABASE,
     LOCAL_RESISTANCE_COMPONENTS,
     CalculationOptions,
     CalculationResult,
+    FluidData,
+    LocalResistanceComponent,
+    LocalResistanceData,
+    OperatingConditions,
+    PipeData,
 )
-from core import calc_pressure_drop
-
 
 ROUGHNESS_DATA = [
     ("钢管(无缝)", "0.02-0.05"),
@@ -35,9 +35,9 @@ class PipelineResistanceGUI:
         self.root.geometry("1500x800")
         self.root.minsize(1400, 700)
 
-        self.component_entries: List[tk.Entry] = []
-        self.component_K_entries: List[tk.Entry] = []
-        self.component_K_labels: List[ttk.Label] = []
+        self.component_entries: list[tk.Entry] = []
+        self.component_K_entries: list[tk.Entry] = []
+        self.component_K_labels: list[ttk.Label] = []
 
         self.lbl_velocity: ttk.Label
         self.lbl_Re: ttk.Label
@@ -51,6 +51,7 @@ class PipelineResistanceGUI:
         self.create_scrollbar()
         self.create_widgets()
         self.set_default_values()
+        self.toggle_local_method_mode()
 
     def create_scrollbar(self):
         self.canvas = tk.Canvas(self.root, highlightthickness=0)
@@ -311,6 +312,9 @@ class PipelineResistanceGUI:
         )
         self.combo_local_method.current(0)
         self.combo_local_method.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=1)
+        self.combo_local_method.bind(
+            "<<ComboboxSelected>>", lambda e: self.toggle_local_method_mode()
+        )
         row += 1
 
         self.include_static_var = tk.BooleanVar(value=False)
@@ -515,9 +519,9 @@ class PipelineResistanceGUI:
         self.lbl_dp_minor.grid(row=row, column=1, sticky=tk.E, pady=1)
         row += 1
 
-        ttk.Label(results_frame, text="摩擦总损失 (Pa):", font=("Arial", 9, "bold")).grid(
-            row=row, column=0, sticky=tk.W, pady=1
-        )
+        ttk.Label(
+            results_frame, text="摩擦总损失 (Pa):", font=("Arial", 9, "bold")
+        ).grid(row=row, column=0, sticky=tk.W, pady=1)
         self.lbl_dp_friction = ttk.Label(
             results_frame, text="--", width=12, anchor="e", font=("Arial", 9, "bold")
         )
@@ -545,9 +549,9 @@ class PipelineResistanceGUI:
         )
         row += 1
 
-        ttk.Label(results_frame, text="系统总压差 (Pa):", font=("Arial", 9, "bold")).grid(
-            row=row, column=0, sticky=tk.W, pady=1
-        )
+        ttk.Label(
+            results_frame, text="系统总压差 (Pa):", font=("Arial", 9, "bold")
+        ).grid(row=row, column=0, sticky=tk.W, pady=1)
         self.lbl_dp_total = ttk.Label(
             results_frame, text="--", width=12, anchor="e", font=("Arial", 9, "bold")
         )
@@ -638,6 +642,13 @@ class PipelineResistanceGUI:
         else:
             self.entry_Q.config(state="disabled")
             self.entry_v.config(state="normal")
+
+    def toggle_local_method_mode(self):
+        """根据局部阻力模型切换 K 值输入框状态：Darby 3K 模式下置为只读，经典 1K 模式下可编辑"""
+        is_3k = self.combo_local_method.current() == 0
+        new_state = "readonly" if is_3k else "normal"
+        for k_entry in self.component_K_entries:
+            k_entry.config(state=new_state)
 
     def get_float(
         self, entry: ttk.Entry, field_name: str, allow_empty: bool = False
@@ -734,11 +745,21 @@ class PipelineResistanceGUI:
                 pipe_data, fluid_data, operating_conditions, local_resistance, options
             )
 
+            # Darby 3K 动态模型：将计算得出的实际动态 K 值回填到界面只读输入框中，并刷新显示
+            if local_method == "darby_3k":
+                for i, fitting in enumerate(FITTINGS_3K_DATABASE):
+                    dyn_k = fitting.calc_k(result.Re, D)
+                    self.component_K_entries[i].config(state="normal")
+                    self.component_K_entries[i].delete(0, tk.END)
+                    self.component_K_entries[i].insert(0, f"{dyn_k:.4f}")
+                    self.component_K_entries[i].config(state="readonly")
+                self.update_K_total_display()
+
             self.display_result(result)
 
         except ValueError as e:
             messagebox.showerror("输入错误", str(e))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             messagebox.showerror("计算错误", str(e))
 
     def display_result(self, result: CalculationResult):
@@ -824,10 +845,12 @@ class PipelineResistanceGUI:
         self.toggle_input_mode()
 
         for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            self.component_K_entries[i].config(state="normal")
             self.component_K_entries[i].delete(0, tk.END)
             self.component_K_entries[i].insert(0, f"{k_value}")
             self.component_entries[i].delete(0, tk.END)
             self.component_entries[i].insert(0, "0")
+        self.toggle_local_method_mode()
         self.update_K_total_display()
 
         self.lbl_dp_major.config(text="--")
@@ -876,6 +899,7 @@ class PipelineResistanceGUI:
         self.combo_local_method.current(0)
 
         for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            self.component_K_entries[i].config(state="normal")
             self.component_K_entries[i].delete(0, tk.END)
             self.component_K_entries[i].insert(0, f"{k_value}")
             self.component_entries[i].delete(0, tk.END)
@@ -884,6 +908,7 @@ class PipelineResistanceGUI:
         self.component_entries[0].insert(0, "10")
         self.component_entries[11].delete(0, tk.END)
         self.component_entries[11].insert(0, "1")
+        self.toggle_local_method_mode()
         self.update_K_total_display()
 
         self.use_flow_rate_var.set(True)
@@ -911,6 +936,7 @@ class PipelineResistanceGUI:
         self.combo_local_method.current(0)
 
         for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
+            self.component_K_entries[i].config(state="normal")
             self.component_K_entries[i].delete(0, tk.END)
             self.component_K_entries[i].insert(0, f"{k_value}")
             self.component_entries[i].delete(0, tk.END)
@@ -920,6 +946,7 @@ class PipelineResistanceGUI:
         self.component_entries[0].insert(0, "4")
         self.component_entries[8].delete(0, tk.END)
         self.component_entries[8].insert(0, "1")
+        self.toggle_local_method_mode()
         self.update_K_total_display()
 
         self.use_flow_rate_var.set(True)
@@ -928,7 +955,7 @@ class PipelineResistanceGUI:
 
 def run_gui():
     root = tk.Tk()
-    app = PipelineResistanceGUI(root)
+    PipelineResistanceGUI(root)
     root.mainloop()
 
 

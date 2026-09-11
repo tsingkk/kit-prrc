@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict
 
 
 @dataclass
@@ -17,8 +16,8 @@ class FluidData:
 
 @dataclass
 class OperatingConditions:
-    Q_m3_h: Optional[float] = None
-    v_m_s: Optional[float] = None
+    Q_m3_h: float | None = None
+    v_m_s: float | None = None
     z_in_m: float = 0.0
     z_out_m: float = 0.0
     use_flow_rate: bool = True
@@ -53,7 +52,7 @@ class Fitting3K:
 
 
 # 标准管件数据库（包含经典 1K 值与 Darby 3K 参数）
-FITTINGS_3K_DATABASE: List[Fitting3K] = [
+FITTINGS_3K_DATABASE: list[Fitting3K] = [
     Fitting3K("90°标准弯头(法兰/焊接)", 800.0, 0.091, 4.0, 0.85),
     Fitting3K("90°标准弯头(螺纹)", 800.0, 0.140, 4.0, 1.20),
     Fitting3K("90°长半径弯头(R/D=1.5)", 800.0, 0.056, 3.9, 0.30),
@@ -83,7 +82,7 @@ LOCAL_RESISTANCE_COMPONENTS = [(f.name, f.classic_K) for f in FITTINGS_3K_DATABA
 @dataclass
 class LocalResistanceData:
     K_total: float = 0.0
-    components: List[LocalResistanceComponent] = field(default_factory=list)
+    components: list[LocalResistanceComponent] = field(default_factory=list)
 
     def calculate_K_total(self) -> float:
         if self.components:
@@ -95,7 +94,7 @@ class LocalResistanceData:
 class CalculationStep:
     name: str
     formula: str
-    input_values: Dict[str, float]
+    input_values: dict[str, float]
     result: float
     unit: str = ""
 
@@ -126,9 +125,8 @@ class CalculationResult:
     rho_used_kg_m3: float
     mu_used_Pa_s: float
     epsilon_over_D: float
-    warnings: List[str]
+    warnings: list[str]
     friction_model_used: str = "Churchill (1977)"
     local_method_used: str = "Darby 3K"
-    calculation_steps: List[CalculationStep] = field(default_factory=list)
-    formulas_used: Dict[str, str] = field(default_factory=dict)
-
+    calculation_steps: list[CalculationStep] = field(default_factory=list)
+    formulas_used: dict[str, str] = field(default_factory=dict)

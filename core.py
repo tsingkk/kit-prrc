@@ -1,20 +1,20 @@
 import math
-from typing import Optional, Tuple
+
 from models import (
-    PipeData,
-    FluidData,
-    OperatingConditions,
-    LocalResistanceData,
+    FITTINGS_3K_DATABASE,
     CalculationOptions,
     CalculationResult,
     CalculationStep,
-    FITTINGS_3K_DATABASE,
+    FluidData,
+    LocalResistanceData,
+    OperatingConditions,
+    PipeData,
 )
 
-G = 9.80665
+GRAVITY = 9.80665  # 标准重力加速度 (m/s²)
 
-RE_LAMINAR上限 = 2300
-RE_TURBULENT下限 = 4000
+RE_LAMINAR_UPPER = 2300
+RE_TURBULENT_LOWER = 4000
 RE_SWAMEE_JAIN_MIN = 5000
 RE_SWAMEE_JAIN_MAX = 1e8
 EPSILON_OVER_D_MIN = 1e-6
@@ -29,7 +29,7 @@ def calc_pressure_drop(
     fluid_data: FluidData,
     operating_conditions: OperatingConditions,
     local_resistance: LocalResistanceData,
-    options: Optional[CalculationOptions] = None,
+    options: CalculationOptions | None = None,
 ) -> CalculationResult:
     if options is None:
         options = CalculationOptions()
@@ -112,12 +112,12 @@ def calc_pressure_drop(
         if options.include_static_head:
             z_in = operating_conditions.z_in_m
             z_out = operating_conditions.z_out_m
-            dp_static_Pa = rho * G * (z_out - z_in)
+            dp_static_Pa = rho * GRAVITY * (z_out - z_in)
             calculation_steps.append(
                 CalculationStep(
                     name="静压差计算",
                     formula="ΔP_static = ρg(z_out - z_in)",
-                    input_values={"ρ": rho, "g": G, "z_out": z_out, "z_in": z_in},
+                    input_values={"ρ": rho, "g": GRAVITY, "z_out": z_out, "z_in": z_in},
                     result=dp_static_Pa,
                     unit="Pa",
                 )
@@ -170,9 +170,7 @@ def calc_pressure_drop(
             f"管内流速 {v_m_s:.2f} m/s 偏高（液体推荐流速通常在 1.0~3.0 m/s 之间，流速过大易导致剧烈磨损与高阻力）"
         )
     elif rho < 500 and v_m_s > 40.0:
-        warnings.append(
-            f"气相流速 {v_m_s:.2f} m/s 偏高，请注意检查噪音与压降损耗"
-        )
+        warnings.append(f"气相流速 {v_m_s:.2f} m/s 偏高，请注意检查噪音与压降损耗")
 
     try:
         Re = rho * v_m_s * D_m / mu_Pa_s
@@ -193,13 +191,16 @@ def calc_pressure_drop(
     formulas_used["雷诺数"] = "Re = ρvD/μ"
 
     # 流态判定
-    if Re < RE_LAMINAR上限:
+    correlation = (options.friction_correlation or "churchill").lower()
+    if Re < RE_LAMINAR_UPPER:
         flow_regime = "laminar"
-    elif Re < RE_TURBULENT下限:
+    elif Re < RE_TURBULENT_LOWER:
         flow_regime = "transition"
-        warnings.append(
-            f"雷诺数 Re={Re:.1f} 处于临界过渡流区 (2300≤Re<4000)，流动存在层流与湍流交替脉动，计算结果具有一定不确定性"
-        )
+        # Churchill 全流态连续方程天然覆盖过渡区，无需发出不确定性警告
+        if correlation not in ("churchill", "auto"):
+            warnings.append(
+                f"雷诺数 Re={Re:.1f} 处于临界过渡流区 (2300≤Re<4000)，流动存在层流与湍流交替脉动，计算结果具有一定不确定性"
+            )
     else:
         flow_regime = "turbulent"
 
@@ -262,7 +263,9 @@ def calc_pressure_drop(
             unit="Pa",
         )
     )
-    formulas_used["局部阻力压降"] = f"ΔP_minor = Σ(K_i·n_i)·(ρv²/2) [{local_method_desc}]"
+    formulas_used["局部阻力压降"] = (
+        f"ΔP_minor = Σ(K_i·n_i)·(ρv²/2) [{local_method_desc}]"
+    )
 
     # 水力流动总摩擦损失 (不可逆能耗，恒为非负)
     dp_friction_loss_Pa = dp_major_Pa + dp_minor_Pa
@@ -283,12 +286,12 @@ def calc_pressure_drop(
     if options.include_static_head:
         z_in = operating_conditions.z_in_m
         z_out = operating_conditions.z_out_m
-        dp_static_Pa = rho * G * (z_out - z_in)
+        dp_static_Pa = rho * GRAVITY * (z_out - z_in)
         calculation_steps.append(
             CalculationStep(
                 name="高程静压差",
                 formula="ΔP_static = ρg(z_out - z_in)",
-                input_values={"ρ": rho, "g": G, "z_out": z_out, "z_in": z_in},
+                input_values={"ρ": rho, "g": GRAVITY, "z_out": z_out, "z_in": z_in},
                 result=dp_static_Pa,
                 unit="Pa",
             )
@@ -297,7 +300,7 @@ def calc_pressure_drop(
 
         if z_out < z_in:
             warnings.append(
-                f"出口高程(z_out={z_out}m)低于进口(z_in={z_in}m)，重力位能转为静压（自流升压 {-dp_static_Pa/1000.0:.3f} kPa）"
+                f"出口高程(z_out={z_out}m)低于进口(z_in={z_in}m)，重力位能转为静压（自流升压 {-dp_static_Pa / 1000.0:.3f} kPa）"
             )
 
     # 进出口所需总压差
@@ -344,7 +347,7 @@ def calc_pressure_drop(
 
 def calculate_friction_factor(
     Re: float, D_m: float, epsilon_m: float, options: CalculationOptions, warnings: list
-) -> Tuple[float, str, str]:
+) -> tuple[float, str, str]:
     """根据雷诺数、相对粗糙度与用户配置计算达西摩擦系数 f"""
     epsilon_over_D = epsilon_m / D_m
     correlation = (options.friction_correlation or "churchill").lower()
@@ -355,25 +358,25 @@ def calculate_friction_factor(
         return f, formula, "Churchill (1977)"
 
     # 2. 分段模型：层流哈根-泊肃叶定律
-    if Re < RE_LAMINAR上限:
+    if Re < RE_LAMINAR_UPPER:
         f = 64.0 / Re
         formula = "f = 64/Re (层流 Hagen-Poiseuille)"
         return f, formula, "层流公式 (64/Re)"
 
     # 3. 分段模型：过渡流区 (2300 <= Re < 4000)
-    elif Re < RE_TURBULENT下限:
-        f_laminar_end = 64.0 / RE_LAMINAR上限
+    elif Re < RE_TURBULENT_LOWER:
+        f_laminar_end = 64.0 / RE_LAMINAR_UPPER
         # 在湍流端点 Re=4000 计算湍流摩擦因子
         if correlation == "colebrook_white":
-            f_turb_end, _ = colebrook_white_solve(RE_TURBULENT下限, epsilon_over_D)
+            f_turb_end, _ = colebrook_white_solve(RE_TURBULENT_LOWER, epsilon_over_D)
         elif correlation == "haaland":
-            f_turb_end, _ = haaland(RE_TURBULENT下限, epsilon_over_D)
+            f_turb_end, _ = haaland(RE_TURBULENT_LOWER, epsilon_over_D)
         else:
-            f_turb_end, _ = swamee_jain(RE_TURBULENT下限, epsilon_over_D)
+            f_turb_end, _ = swamee_jain(RE_TURBULENT_LOWER, epsilon_over_D)
 
         # 正确计算线性插值权重 alpha, 严防除零错误
-        delta_re = RE_TURBULENT下限 - RE_LAMINAR上限
-        alpha = (Re - RE_LAMINAR上限) / delta_re
+        delta_re = RE_TURBULENT_LOWER - RE_LAMINAR_UPPER
+        alpha = (Re - RE_LAMINAR_UPPER) / delta_re
         f = f_laminar_end + alpha * (f_turb_end - f_laminar_end)
         formula = (
             f"f = f_laminar + α·(f_turbulent - f_laminar), "
@@ -398,16 +401,15 @@ def calculate_friction_factor(
             if (
                 epsilon_over_D < EPSILON_OVER_D_MIN
                 or epsilon_over_D > EPSILON_OVER_D_MAX
-            ):
-                if epsilon_over_D > 0:
-                    warnings.append(
-                        f"相对粗糙度 ε/D={epsilon_over_D:.6f} 超出Swamee-Jain推荐范围(10⁻⁶ < ε/D < 10⁻²)"
-                    )
+            ) and epsilon_over_D > 0:
+                warnings.append(
+                    f"相对粗糙度 ε/D={epsilon_over_D:.6f} 超出Swamee-Jain推荐范围(10⁻⁶ < ε/D < 10⁻²)"
+                )
             f, formula = swamee_jain(Re, epsilon_over_D)
             return f, formula, "Swamee-Jain"
 
 
-def churchill_1977(Re: float, epsilon_over_D: float) -> Tuple[float, str]:
+def churchill_1977(Re: float, epsilon_over_D: float) -> tuple[float, str]:
     """Stuart Churchill (1977) 全流态连续显式达西摩擦系数模型"""
     if Re <= 0:
         return 0.0, "f = 0"
@@ -430,7 +432,7 @@ def churchill_1977(Re: float, epsilon_over_D: float) -> Tuple[float, str]:
     return f, formula
 
 
-def swamee_jain(Re: float, epsilon_over_D: float) -> Tuple[float, str]:
+def swamee_jain(Re: float, epsilon_over_D: float) -> tuple[float, str]:
     """Swamee-Jain 显式湍流摩擦系数模型"""
     try:
         term1 = epsilon_over_D / 3.7
@@ -445,7 +447,7 @@ def swamee_jain(Re: float, epsilon_over_D: float) -> Tuple[float, str]:
         raise ValueError(f"无法计算摩擦因子: {e}")
 
 
-def haaland(Re: float, epsilon_over_D: float) -> Tuple[float, str]:
+def haaland(Re: float, epsilon_over_D: float) -> tuple[float, str]:
     """Haaland (1983) 显式湍流摩擦系数模型"""
     try:
         term1 = (epsilon_over_D / 3.7) ** 1.11
@@ -462,7 +464,7 @@ def haaland(Re: float, epsilon_over_D: float) -> Tuple[float, str]:
 
 def colebrook_white_solve(
     Re: float, epsilon_over_D: float, max_iter: int = 40, tol: float = 1e-8
-) -> Tuple[float, str]:
+) -> tuple[float, str]:
     """Colebrook-White 隐式超越方程高精度牛顿-拉夫逊法迭代求解"""
     if Re <= 0:
         return 0.0, "f = 0"
@@ -486,7 +488,9 @@ def colebrook_white_solve(
             break
 
     f = 1.0 / (x**2)
-    formula = "1/√f = -2.0·log₁₀[ε/(3.7D) + 2.51/(Re·√f)] (Colebrook-White 隐式迭代求解)"
+    formula = (
+        "1/√f = -2.0·log₁₀[ε/(3.7D) + 2.51/(Re·√f)] (Colebrook-White 隐式迭代求解)"
+    )
     return f, formula
 
 
@@ -497,7 +501,7 @@ def calculate_minor_loss(
     dynamic_pressure: float,
     options: CalculationOptions,
     warnings: list,
-) -> Tuple[float, float, str]:
+) -> tuple[float, float, str]:
     """计算局部阻力损失，支持 Darby 3K 高保真模型与经典 1K 常数法"""
     method = (options.local_resistance_method or "darby_3k").lower()
 
@@ -518,9 +522,12 @@ def calculate_minor_loss(
                 k_i = comp.K
             total_k += k_i * comp.count
 
-        if Re < RE_LAMINAR上限 and total_k > sum(
-            c.total_K for c in local_resistance.components
-        ):
+        classic_total = sum(
+            (_FITTINGS_3K_MAP[c.name].classic_K if c.name in _FITTINGS_3K_MAP else c.K)
+            * c.count
+            for c in local_resistance.components
+        )
+        if Re < RE_LAMINAR_UPPER and total_k > classic_total:
             warnings.append(
                 "低雷诺数下触发 Darby 3K 粘性增强修正，管件实际局部阻力系数已自动放大"
             )

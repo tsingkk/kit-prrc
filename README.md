@@ -28,6 +28,7 @@
   - 内置 **Darby 3K 动态模型**：根据流动局部雷诺数 $Re$ 与管道公称内径（英寸）动态求解：
     $$K = \frac{K_1}{Re} + K_\infty \left( 1 + \frac{K_d}{D_{in}^{0.3}} \right)$$
   - 涵盖 90° 弯头、45° 弯头、三通、闸阀、截止阀、球阀、止回阀、底阀等标准工业管件。
+  - **交互体验保护**：在 Darby 3K 模式下，管件 K 值列自动设为只读并在计算后回填动态实际 K 值；切换至经典 1K 模式时恢复自由编辑。
 - **经典 1K 常数法**：
   - 同时保留传统固定系数累加法，便于不同工程标准与文献对比。
 
@@ -66,7 +67,29 @@
 
 ---
 
-## 三、 安装与运行指南
+## 三、 适用范围与不适用边界说明 (未覆盖但属合理范畴的功能)
+
+本工具旨在为工程常用工况提供快速、高保真且稳定的水力阻力计算。以下物理场景属于超出本工具适用范围的合理范畴，工程核算时需特别注意：
+
+1. **气液两相流（Two-Phase Flow）**：
+   - 本工具仅适用于单相流体（单一均相液体或气体）的流动阻力计算。
+   - 不适用于存在剧烈闪蒸、凝结或气液混输的两相流动（如未内置 Lockhart-Martinelli、Chisholm 等两相分相流阻力倍增模型）。
+2. **动量变化与加速度压降（Acceleration Pressure Drop）**：
+   - 本工具基于恒定管径和单相恒密度不可压缩/弱可压缩稳态流动假设，流体进出口流速相等，加速度压降 $\Delta P_{acc} = G^2 (1/\rho_{out} - 1/\rho_{in})$ 恒为 0。
+   - 若流体沿管道有剧烈相变、大温差膨胀或密度显著衰变，需额外计入流体动量增量引起的附加压力降。
+3. **复杂变径与管网系统（Network & Reducer Systems）**：
+   - 本工具面向单一恒定管径管段进行核算。
+   - 若管路系统包含大小头急扩/急缩变径段、多分支分配管路或环状闭合管网，需逐段拆分计算或使用专用管网水力平差软件。
+4. **高压降大膨胀气体流动（Compressible Gas Flow with Large $\Delta P$）**：
+   - 当气体输送压降较小（$\Delta P < 10\% P_{in}$）时，可采用本工具的平均密度法进行工程近视计算。
+   - 当压降较大（$\Delta P \ge 10\% P_{in}$）时，气体膨胀显著，密度与流速沿程急剧变化，常规 Darcy-Weisbach 公式不再适用，需采用完全可压缩流动等温或绝热微分方程进行数值积分。
+5. **非牛顿流体流动（Non-Newtonian Fluids）**：
+   - 本工具所有雷诺数与摩擦因子公式均建立在牛顿流体（剪切应力与剪切速率呈线性关系）基础之上。
+   - 对高聚物熔体、聚合物浆料、钻井泥浆、污泥胶体等非牛顿流体（假塑性、胀塑性、宾汉流体），需依据流变本构方程修正广义雷诺数与阻力系数。
+
+---
+
+## 四、 安装与运行指南
 
 本项目严格采用现代 Python 包管理工具 **[uv](https://github.com/astral-sh/uv)** 进行环境隔离与依赖管理。
 
@@ -84,51 +107,42 @@ uv sync
 ```
 
 ### 3. 启动图形计算界面
-可通过以下任一命令直接启动桌面程序：
 ```bash
-# 方式一：通过配置好的 CLI 脚本启动
-uv run pipeline-resistance
-
-# 方式二：直接运行 GUI 脚本
 uv run python gui.py
 ```
 
 ---
 
-## 四、 开发与测试规范
+## 五、 开发与测试规范
 
 项目遵循严格的代码质量规范，请使用 `uv run` 执行相关工具：
 
 ```bash
 # 运行自动化单元测试
-uv run pytest -v
+uv run pytest -v test_core.py
 
 # 静默运行测试
 uv run pytest -q
 
 # 执行静态类型检查 (mypy)
-uv run mypy core.py models.py gui.py src/pipeline_resistance
+uv run mypy core.py models.py gui.py test_core.py
 
-# 代码格式化与检查 (如已配置 ruff)
+# 代码格式化与检查
 uv run ruff check .
 uv run ruff format .
 ```
 
 ---
 
-## 五、 项目结构说明
+## 六、 项目结构说明
 
 ```
 pipeline_resistance/
 ├── core.py                   # 物理计算核心引擎 (Churchill, Colebrook, Darby 3K等)
 ├── models.py                 # 数据类定义、管件参数数据库及计算配置
 ├── gui.py                    # 基于 Tkinter 的四栏桌面图形界面交互层
-├── tests/                    # 自动化单元测试套件
-│   └── test_core.py          # 水力模型物理精度、边界条件与Bug防回归测试
-├── src/
-│   └── pipeline_resistance/  # 打包与对外导入接口
-│       └── __init__.py
-├── pyproject.toml            # 项目元数据、依赖管理与 CLI 入口点配置
+├── test_core.py              # 自动化单元测试套件 (覆盖物理精度、边界条件与防回归测试)
+├── pyproject.toml            # 项目元数据与依赖管理配置
 ├── uv.lock                   # uv 依赖确定性锁定文件
 ├── .gitignore                # Git 忽略文件规则
 └── README.md                 # 项目详细说明文档
@@ -136,7 +150,7 @@ pipeline_resistance/
 
 ---
 
-## 六、 许可证与作者
+## 七、 许可证与作者
 
 - **作者**: tsingkk (<bodekangk@gmail.com>)
 - **版权声明**: 本项目遵循开源规范，欢迎提交 Issue 与改进建议。
