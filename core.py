@@ -475,6 +475,7 @@ def colebrook_white_solve(
 
     # 求解 F(x) = x + 2.0 * log10(ε/(3.7D) + 2.51*x/Re) = 0
     ln10 = math.log(10.0)
+    dx = float("inf")
     for _ in range(max_iter):
         arg = epsilon_over_D / 3.7 + (2.51 / Re) * x
         if arg <= 0:
@@ -486,6 +487,15 @@ def colebrook_white_solve(
         x -= dx
         if abs(dx) < tol:
             break
+    else:
+        # 达到最大迭代次数仍未收敛（实践中极罕见，因 Haaland 初值极优）
+        f = 1.0 / (x**2)
+        formula = (
+            f"1/√f = -2.0·log₁₀[ε/(3.7D) + 2.51/(Re·√f)] "
+            f"[警告: Colebrook-White 迭代未收敛，已达 {max_iter} 步，|Δx|={abs(dx):.2e}，"
+            f"结果精度可能不足]"
+        )
+        return f, formula
 
     f = 1.0 / (x**2)
     formula = (
