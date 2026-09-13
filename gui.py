@@ -32,8 +32,22 @@ class PipelineResistanceGUI:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Kit管道阻力降计算工具")
-        self.root.geometry("1500x800")
-        self.root.minsize(1400, 700)
+
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+
+        target_w = 1500
+        target_h = 900
+
+        # 根据屏幕分辨率自适应，防止在小屏幕或特定缩放比例下超出可用区域
+        target_w = min(target_w, max(1200, screen_w - 60))
+        target_h = min(target_h, max(700, screen_h - 80))
+
+        # 屏幕居中
+        x = max(0, (screen_w - target_w) // 2)
+        y = max(0, (screen_h - target_h) // 2)
+        self.root.geometry(f"{target_w}x{target_h}+{x}+{y}")
+        self.root.minsize(1200, 650)
 
         self.component_entries: list[tk.Entry] = []
         self.component_K_entries: list[tk.Entry] = []
@@ -158,7 +172,7 @@ class PipelineResistanceGUI:
         left_frame.columnconfigure(0, weight=1)
 
         param_frame = ttk.LabelFrame(left_frame, text="输入参数", padding="5")
-        param_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        param_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 4))
         param_frame.columnconfigure(1, weight=1)
 
         row = 0
@@ -190,7 +204,7 @@ class PipelineResistanceGUI:
         row += 1
 
         ttk.Separator(param_frame, orient="horizontal").grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=3
         )
         row += 1
 
@@ -214,7 +228,7 @@ class PipelineResistanceGUI:
         row += 1
 
         ttk.Separator(param_frame, orient="horizontal").grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=3
         )
         row += 1
 
@@ -226,30 +240,24 @@ class PipelineResistanceGUI:
         self.use_flow_rate_var = tk.BooleanVar(value=True)
         ttk.Radiobutton(
             param_frame,
-            text="流量 Q (m³/h)",
+            text="流量 Q (m³/h):",
             variable=self.use_flow_rate_var,
             value=True,
             command=self.toggle_input_mode,
-        ).grid(row=row, column=0, columnspan=2, sticky=tk.W)
-        row += 1
-
+        ).grid(row=row, column=0, sticky=tk.W, pady=1)
         self.entry_Q = ttk.Entry(param_frame, width=15)
         self.entry_Q.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=1)
-        ttk.Label(param_frame, text="Q:").grid(row=row, column=0, sticky=tk.W)
         row += 1
 
         ttk.Radiobutton(
             param_frame,
-            text="流速 v (m/s)",
+            text="流速 v (m/s):",
             variable=self.use_flow_rate_var,
             value=False,
             command=self.toggle_input_mode,
-        ).grid(row=row, column=0, columnspan=2, sticky=tk.W)
-        row += 1
-
+        ).grid(row=row, column=0, sticky=tk.W, pady=1)
         self.entry_v = ttk.Entry(param_frame, width=15, state="disabled")
         self.entry_v.grid(row=row, column=1, sticky=(tk.W, tk.E), pady=1)
-        ttk.Label(param_frame, text="v:").grid(row=row, column=0, sticky=tk.W)
         row += 1
 
         ttk.Label(param_frame, text="进口高程 z_in (m):").grid(
@@ -267,7 +275,7 @@ class PipelineResistanceGUI:
         row += 1
 
         ttk.Separator(param_frame, orient="horizontal").grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=4
+            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=3
         )
         row += 1
 
@@ -324,7 +332,7 @@ class PipelineResistanceGUI:
         row += 1
 
         local_frame = ttk.LabelFrame(left_frame, text="局部阻力输入", padding="5")
-        local_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        local_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 4))
 
         header_frame = ttk.Frame(local_frame)
         header_frame.pack(fill=tk.X)
@@ -336,7 +344,7 @@ class PipelineResistanceGUI:
         list_frame = ttk.Frame(local_frame)
         list_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.canvas_comp = tk.Canvas(list_frame, height=180, highlightthickness=0)
+        self.canvas_comp = tk.Canvas(list_frame, height=150, highlightthickness=0)
         scrollbar_comp = ttk.Scrollbar(
             list_frame, orient="vertical", command=self.canvas_comp.yview
         )
@@ -384,7 +392,7 @@ class PipelineResistanceGUI:
         self.canvas_comp.bind("<Button-5>", self._on_comp_mousewheel)
 
         total_frame = ttk.Frame(local_frame)
-        total_frame.pack(fill=tk.X, pady=5)
+        total_frame.pack(fill=tk.X, pady=3)
         ttk.Label(total_frame, text="总K值:", font=("Arial", 9, "bold")).pack(
             side=tk.LEFT, padx=5
         )
@@ -394,7 +402,7 @@ class PipelineResistanceGUI:
         self.lbl_K_total.pack(side=tk.LEFT)
 
         control_frame = ttk.Frame(left_frame)
-        control_frame.pack(fill=tk.X, pady=5)
+        control_frame.pack(fill=tk.X, pady=4)
 
         self.btn_calculate = ttk.Button(
             control_frame, text="计算", command=self.calculate, width=8
