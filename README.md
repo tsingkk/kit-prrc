@@ -91,22 +91,32 @@
 
 ## 四、 安装与运行指南
 
+### 1. 从 GitHub Releases 直接下载运行（推荐，开箱即用）
+
+若无需修改源码或进行二次开发，可直接下载已打包的 Windows 单一可执行程序：
+
+1. 前往本项目的 **[GitHub Releases](https://github.com/tsingkk/kit-prrc/releases)** 页面。
+2. 在最新版本的 **Assets** 列表中下载 `kit-prrc.exe`。
+3. 双击 `kit-prrc.exe` 即可直接启动图形计算界面（目标机器无需预装 Python 环境或任何第三方依赖）。
+
+### 2. 从源码运行（开发者模式）
+
 本项目严格采用现代 Python 包管理工具 **[uv](https://github.com/astral-sh/uv)** 进行环境隔离与依赖管理。
 
-### 1. 环境准备
+#### (1) 环境准备
 确保已安装 Python 3.12+ 以及 uv：
 ```bash
 # 安装 uv (如果尚未安装)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### 2. 同步项目环境与依赖
+#### (2) 同步项目环境与依赖
 进入项目根目录后执行：
 ```bash
 uv sync
 ```
 
-### 3. 启动图形计算界面
+#### (3) 启动图形计算界面
 ```bash
 uv run python gui.py
 ```
@@ -130,6 +140,9 @@ uv run mypy core.py models.py gui.py test_core.py
 # 代码格式化与检查
 uv run ruff check .
 uv run ruff format .
+
+# 打包构建 Windows 单一可执行程序 (输出为 dist/kit-prrc.exe)
+pwsh -File .\scripts\build_windows_onefile.ps1
 ```
 
 ---
@@ -142,11 +155,14 @@ pipeline_resistance/
 ├── models.py                 # 数据类定义、管件参数数据库及计算配置
 ├── gui.py                    # 基于 Tkinter 的四栏桌面图形界面交互层
 ├── test_core.py              # 自动化单元测试套件 (覆盖物理精度、边界条件与防回归测试)
+├── scripts/
+│   └── build_windows_onefile.ps1 # 基于 Nuitka 的 Windows 单一可执行程序自动化打包脚本
 ├── pyproject.toml            # 项目元数据与依赖管理配置
 ├── uv.lock                   # uv 依赖确定性锁定文件
 ├── .gitignore                # Git 忽略文件规则
 └── README.md                 # 项目详细说明文档
 ```
+
 
 ---
 
