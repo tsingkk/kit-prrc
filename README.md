@@ -163,10 +163,3 @@ pipeline_resistance/
 └── README.md                 # 项目详细说明文档
 ```
 
-
----
-
-## 七、 许可证与作者
-
-- **作者**: tsingkk (<bodekangk@gmail.com>)
-- **版权声明**: 本项目遵循开源规范，欢迎提交 Issue 与改进建议。
