@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
 
 $entry = "gui.py"
-$name = "kit-prrc.exe"
+$name = "kit管道阻力降计算工具.exe"
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     throw "uv was not found on PATH. Install uv, reopen the shell, and retry."
@@ -13,35 +13,50 @@ Write-Host ">>> Synchronizing project dependencies with uv..." -ForegroundColor 
 uv sync
 
 # 如果存在旧的运行中进程，先行停止以避免文件锁冲突
-Get-Process -Name "kit-prrc", "PipelineResistance" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "kit-prrc", "PipelineResistance", "kit管道阻力降计算工具" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-
-# 清理已知历史构建中间目录
-
+# 清理已知历史构建中间目录与旧产物
 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue `
-    "dist\gui.build", "dist\gui.dist", "dist\gui.onefile-build", "dist\$name"
+    "dist\gui.build", "dist\gui.dist", "dist\gui.onefile-build", "dist\$name", "dist\kit-prrc.exe"
 
-Write-Host ">>> [Phase 1] Building Standalone validation artifact..." -ForegroundColor Cyan
-uv run python -m nuitka `
-    --mode=standalone `
-    --assume-yes-for-downloads `
-    --enable-plugin=anti-bloat `
-    --enable-plugin=tk-inter `
-    --windows-console-mode=disable `
-    --output-dir=dist `
-    --output-filename=$name `
-    $entry
+Write-Host ">>> Building minimal Onefile executable with Nuitka..." -ForegroundColor Cyan
 
-if ($LASTEXITCODE -ne 0) {
-    throw "Standalone build failed with exit code $LASTEXITCODE"
-}
-
-Write-Host ">>> [Phase 2] Building Onefile production artifact..." -ForegroundColor Cyan
 uv run python -m nuitka `
     --mode=onefile `
     --assume-yes-for-downloads `
+    --lto=yes `
+    --deployment `
+    --remove-output `
     --enable-plugin=anti-bloat `
     --enable-plugin=tk-inter `
+    --python-flag=no_docstrings `
+    --python-flag=no_asserts `
+    --python-flag=no_site `
+    --nofollow-import-to=unittest,pydoc,doctest,pdb,bdb,difflib `
+    --nofollow-import-to=email,http,urllib,xml,html `
+    --nofollow-import-to=ssl,hashlib,hmac,secrets `
+    --nofollow-import-to=sqlite3,lzma,bz2 `
+    --nofollow-import-to=multiprocessing,concurrent,asyncio,socket,select,selectors `
+    --nofollow-import-to=tkinter.tix,tkinter.colorchooser,tkinter.filedialog,tkinter.simpledialog,tkinter.dnd,idlelib,turtle `
+    '--noinclude-data-files=tcl/tzdata/*' `
+    '--noinclude-data-files=tcl/msgs/*' `
+    '--noinclude-data-files=tcl/opt0.4/*' `
+    '--noinclude-data-files=tcl/http1.0/*' `
+    '--noinclude-data-files=tk/msgs/*' `
+    '--noinclude-data-files=tk/images/*' `
+    '--noinclude-data-files=tcl/encoding/jis*' `
+    '--noinclude-data-files=tcl/encoding/ksc*' `
+    '--noinclude-data-files=tcl/encoding/shiftjis*' `
+    '--noinclude-data-files=tcl/encoding/euc-*' `
+    '--noinclude-data-files=tcl/encoding/big5*' `
+    '--noinclude-data-files=tcl/encoding/cp932*' `
+    '--noinclude-data-files=tcl/encoding/cp949*' `
+    '--noinclude-data-files=tcl/encoding/cp950*' `
+    '--noinclude-data-files=tcl/encoding/cns11643*' `
+    '--noinclude-data-files=tcl/encoding/iso2022*' `
+    '--noinclude-data-files=tcl/encoding/mac*' `
+    '--noinclude-data-files=tcl/encoding/ebcdic*' `
+    '--noinclude-dlls=libcrypto*,libssl*,sqlite3*,liblzma*,libbz2*' `
     --windows-console-mode=disable `
     --output-dir=dist `
     --output-filename=$name `

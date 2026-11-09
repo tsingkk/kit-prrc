@@ -141,7 +141,7 @@ uv run mypy core.py models.py gui.py test_core.py
 uv run ruff check .
 uv run ruff format .
 
-# 打包构建 Windows 单一可执行程序 (输出为 dist/kit-prrc.exe)
+# 打包构建 Windows 单一可执行程序 (输出为 dist/kit管道阻力降计算工具.exe)
 pwsh -File .\scripts\build_windows_onefile.ps1
 ```
 
