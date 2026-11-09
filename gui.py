@@ -36,18 +36,18 @@ class PipelineResistanceGUI:
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
 
-        target_w = 1500
-        target_h = 900
+        target_w = 1560
+        target_h = 940
 
         # 根据屏幕分辨率自适应，防止在小屏幕或特定缩放比例下超出可用区域
-        target_w = min(target_w, max(1200, screen_w - 60))
-        target_h = min(target_h, max(700, screen_h - 80))
+        target_w = min(target_w, max(1260, screen_w - 40))
+        target_h = min(target_h, max(720, screen_h - 60))
 
         # 屏幕居中
         x = max(0, (screen_w - target_w) // 2)
         y = max(0, (screen_h - target_h) // 2)
         self.root.geometry(f"{target_w}x{target_h}+{x}+{y}")
-        self.root.minsize(1200, 650)
+        self.root.minsize(1260, 680)
 
         self.component_entries: list[tk.Entry] = []
         self.component_K_entries: list[tk.Entry] = []
@@ -97,9 +97,19 @@ class PipelineResistanceGUI:
 
     def _on_canvas_configure(self, event):
         canvas_width = event.width
-        self.canvas.itemconfig(self.canvas_window, width=canvas_width)
+        canvas_height = event.height
+        req_height = self.scrollable_frame.winfo_reqheight()
+        self.canvas.itemconfig(
+            self.canvas_window,
+            width=canvas_width,
+            height=max(canvas_height, req_height),
+        )
 
     def _update_scroll_region(self):
+        req_height = self.scrollable_frame.winfo_reqheight()
+        canvas_height = self.canvas.winfo_height()
+        if canvas_height > 1 and req_height > canvas_height:
+            self.canvas.itemconfig(self.canvas_window, height=req_height)
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def _on_mousewheel(self, event):
@@ -115,6 +125,11 @@ class PipelineResistanceGUI:
                 elif event.delta:
                     self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
+    def _bind_comp_mousewheel(self, widget):
+        widget.bind("<MouseWheel>", self._on_comp_mousewheel, add="+")
+        widget.bind("<Button-4>", self._on_comp_mousewheel, add="+")
+        widget.bind("<Button-5>", self._on_comp_mousewheel, add="+")
+
     def _on_comp_mousewheel(self, event):
         scroll_region = self.canvas_comp.bbox("all")
         if scroll_region:
@@ -129,6 +144,7 @@ class PipelineResistanceGUI:
                     self.canvas_comp.yview_scroll(
                         int(-1 * (event.delta / 120)), "units"
                     )
+        return "break"
 
     def create_widgets(self):
         main_frame = ttk.Frame(self.scrollable_frame, padding="5")
@@ -137,10 +153,10 @@ class PipelineResistanceGUI:
         self.scrollable_frame.columnconfigure(0, weight=1)
         self.scrollable_frame.rowconfigure(0, weight=1)
 
-        main_frame.columnconfigure(0, weight=1, minsize=280)
-        main_frame.columnconfigure(1, weight=1, minsize=200)
-        main_frame.columnconfigure(2, weight=1, minsize=250)
-        main_frame.columnconfigure(3, weight=1, minsize=380)
+        main_frame.columnconfigure(0, weight=3, minsize=340)
+        main_frame.columnconfigure(1, weight=2, minsize=240)
+        main_frame.columnconfigure(2, weight=2, minsize=250)
+        main_frame.columnconfigure(3, weight=5, minsize=420)
         main_frame.rowconfigure(1, weight=1)
 
         header_frame = ttk.Frame(main_frame)
@@ -156,7 +172,7 @@ class PipelineResistanceGUI:
         )
         title_label.grid(row=0, column=1)
 
-        author_label = ttk.Label(header_frame, text="by tsingkk", font=("Arial", 10))
+        author_label = ttk.Label(header_frame, text="v1.0 by tsingkk@github", font=("Arial", 10))
         author_label.grid(row=0, column=2, sticky="e", padx=5)
 
         self.create_input_column(main_frame)
@@ -172,7 +188,7 @@ class PipelineResistanceGUI:
         left_frame.columnconfigure(0, weight=1)
 
         param_frame = ttk.LabelFrame(left_frame, text="输入参数", padding="5")
-        param_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 4))
+        param_frame.pack(fill=tk.X, expand=False, pady=(0, 4))
         param_frame.columnconfigure(1, weight=1)
 
         row = 0
@@ -335,16 +351,24 @@ class PipelineResistanceGUI:
         local_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 4))
 
         header_frame = ttk.Frame(local_frame)
-        header_frame.pack(fill=tk.X)
-        ttk.Label(header_frame, text="管件名称", width=12).pack(side=tk.LEFT, padx=2)
-        ttk.Label(header_frame, text="K值", width=5).pack(side=tk.LEFT, padx=2)
-        ttk.Label(header_frame, text="数量", width=5).pack(side=tk.LEFT, padx=2)
-        ttk.Label(header_frame, text="K×n", width=5).pack(side=tk.LEFT, padx=2)
+        header_frame.pack(fill=tk.X, pady=(0, 2))
+        ttk.Label(header_frame, text="管件名称", width=19, anchor="w").grid(
+            row=0, column=0, padx=2, sticky=tk.W
+        )
+        ttk.Label(header_frame, text="K值", width=7, anchor="center").grid(
+            row=0, column=1, padx=2
+        )
+        ttk.Label(header_frame, text="数量", width=6, anchor="center").grid(
+            row=0, column=2, padx=2
+        )
+        ttk.Label(header_frame, text="K×n", width=6, anchor="e").grid(
+            row=0, column=3, padx=2, sticky=tk.E
+        )
 
         list_frame = ttk.Frame(local_frame)
         list_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.canvas_comp = tk.Canvas(list_frame, height=150, highlightthickness=0)
+        self.canvas_comp = tk.Canvas(list_frame, highlightthickness=0)
         scrollbar_comp = ttk.Scrollbar(
             list_frame, orient="vertical", command=self.canvas_comp.yview
         )
@@ -359,30 +383,35 @@ class PipelineResistanceGUI:
         self.canvas_comp.create_window((0, 0), window=comp_inner_frame, anchor="nw")
         self.canvas_comp.configure(yscrollcommand=scrollbar_comp.set)
 
+        self._bind_comp_mousewheel(comp_inner_frame)
+
         for i, (name, k_value) in enumerate(LOCAL_RESISTANCE_COMPONENTS):
-            ttk.Label(comp_inner_frame, text=name, width=12).grid(
-                row=i, column=0, padx=2, pady=1, sticky=tk.W
-            )
-            k_entry = ttk.Entry(comp_inner_frame, width=6)
+            lbl_name = ttk.Label(comp_inner_frame, text=name, width=19, anchor="w")
+            lbl_name.grid(row=i, column=0, padx=2, pady=1, sticky=tk.W)
+
+            k_entry = ttk.Entry(comp_inner_frame, width=7)
             k_entry.insert(0, f"{k_value}")
             k_entry.grid(row=i, column=1, padx=2, pady=1)
             k_entry.bind(
                 "<KeyRelease>", lambda e, idx=i: self.update_K_total_display(idx)
             )
 
-            entry = ttk.Entry(comp_inner_frame, width=5)
+            entry = ttk.Entry(comp_inner_frame, width=6)
             entry.insert(0, "0")
             entry.grid(row=i, column=2, padx=2, pady=1)
             entry.bind(
                 "<KeyRelease>", lambda e, idx=i: self.update_K_total_display(idx)
             )
 
-            total_label = ttk.Label(comp_inner_frame, text="0", width=6)
-            total_label.grid(row=i, column=3, padx=2, pady=1)
+            total_label = ttk.Label(comp_inner_frame, text="0.00", width=6, anchor="e")
+            total_label.grid(row=i, column=3, padx=2, pady=1, sticky=tk.E)
 
             self.component_K_entries.append(k_entry)
             self.component_entries.append(entry)
             self.component_K_labels.append(total_label)
+
+            for w in (lbl_name, k_entry, entry, total_label):
+                self._bind_comp_mousewheel(w)
 
         self.canvas_comp.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar_comp.pack(side=tk.RIGHT, fill=tk.Y)
@@ -402,27 +431,25 @@ class PipelineResistanceGUI:
         self.lbl_K_total.pack(side=tk.LEFT)
 
         control_frame = ttk.Frame(left_frame)
-        control_frame.pack(fill=tk.X, pady=4)
+        control_frame.pack(fill=tk.X, pady=(2, 0))
 
         self.btn_calculate = ttk.Button(
-            control_frame, text="计算", command=self.calculate, width=8
+            control_frame, text="计算", command=self.calculate
         )
-        self.btn_calculate.pack(side=tk.LEFT, padx=2)
+        self.btn_calculate.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
 
-        self.btn_reset = ttk.Button(
-            control_frame, text="重置", command=self.reset, width=8
-        )
-        self.btn_reset.pack(side=tk.LEFT, padx=2)
+        self.btn_reset = ttk.Button(control_frame, text="重置", command=self.reset)
+        self.btn_reset.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
 
         self.btn_example1 = ttk.Button(
-            control_frame, text="示例1:湍流", command=self.load_example1, width=10
+            control_frame, text="示例1:湍流", command=self.load_example1
         )
-        self.btn_example1.pack(side=tk.LEFT, padx=2)
+        self.btn_example1.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
 
         self.btn_example2 = ttk.Button(
-            control_frame, text="示例2:层流", command=self.load_example2, width=10
+            control_frame, text="示例2:层流", command=self.load_example2
         )
-        self.btn_example2.pack(side=tk.LEFT, padx=2)
+        self.btn_example2.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
 
     def update_K_total_display(self, changed_idx=None):
         total = 0.0
@@ -450,16 +477,16 @@ class PipelineResistanceGUI:
         roughness_frame = ttk.LabelFrame(
             center_frame, text="管道粗糙度参考值 (mm)", padding="5"
         )
-        roughness_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        roughness_frame.pack(fill=tk.X, expand=False, pady=(0, 5))
 
         columns = ("type", "epsilon")
         self.roughness_tree = ttk.Treeview(
-            roughness_frame, columns=columns, show="headings", height=8
+            roughness_frame, columns=columns, show="headings", height=10
         )
         self.roughness_tree.heading("type", text="管材类型")
         self.roughness_tree.heading("epsilon", text="粗糙度ε")
-        self.roughness_tree.column("type", width=90)
-        self.roughness_tree.column("epsilon", width=70)
+        self.roughness_tree.column("type", width=110, anchor="w")
+        self.roughness_tree.column("epsilon", width=75, anchor="center")
 
         for item in ROUGHNESS_DATA:
             self.roughness_tree.insert("", "end", values=item)
@@ -478,12 +505,12 @@ class PipelineResistanceGUI:
 
         columns = ("component", "k_value")
         self.k_tree = ttk.Treeview(
-            k_value_frame, columns=columns, show="headings", height=8
+            k_value_frame, columns=columns, show="headings", height=18
         )
         self.k_tree.heading("component", text="管件类型")
         self.k_tree.heading("k_value", text="K值")
-        self.k_tree.column("component", width=90)
-        self.k_tree.column("k_value", width=70)
+        self.k_tree.column("component", width=155, anchor="w")
+        self.k_tree.column("k_value", width=55, anchor="center")
 
         for item in LOCAL_RESISTANCE_COMPONENTS:
             self.k_tree.insert("", "end", values=item)
@@ -503,7 +530,7 @@ class PipelineResistanceGUI:
         right_frame.columnconfigure(0, weight=1)
 
         results_frame = ttk.LabelFrame(right_frame, text="计算结果", padding="5")
-        results_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        results_frame.pack(fill=tk.X, expand=False, pady=(0, 5))
         results_frame.columnconfigure(1, weight=1)
 
         row = 0
@@ -609,7 +636,12 @@ class PipelineResistanceGUI:
         warnings_frame.pack(fill=tk.BOTH, expand=True)
 
         self.text_warnings = tk.Text(
-            warnings_frame, height=6, width=30, state="disabled", font=("Arial", 9)
+            warnings_frame,
+            height=5,
+            width=28,
+            state="disabled",
+            font=("Arial", 9),
+            wrap=tk.WORD,
         )
         warnings_scroll = ttk.Scrollbar(
             warnings_frame, orient="vertical", command=self.text_warnings.yview
@@ -629,7 +661,12 @@ class PipelineResistanceGUI:
         steps_frame.pack(fill=tk.BOTH, expand=True)
 
         self.text_steps = tk.Text(
-            steps_frame, height=35, width=45, state="disabled", font=("Consolas", 9)
+            steps_frame,
+            height=35,
+            width=45,
+            state="disabled",
+            font=("Consolas", 9),
+            wrap=tk.WORD,
         )
         steps_scroll = ttk.Scrollbar(
             steps_frame, orient="vertical", command=self.text_steps.yview
@@ -799,27 +836,25 @@ class PipelineResistanceGUI:
         self.text_steps.config(state="normal")
         self.text_steps.delete(1.0, tk.END)
 
-        self.text_steps.insert(tk.END, "═══════════════════════════════\n")
-        self.text_steps.insert(tk.END, "         所 用 公 式\n")
-        self.text_steps.insert(tk.END, "═══════════════════════════════\n\n")
+        self.text_steps.insert(tk.END, "【 所 用 公 式 】\n")
+        self.text_steps.insert(tk.END, "───────────────────────────────\n")
         for name, formula in result.formulas_used.items():
-            self.text_steps.insert(tk.END, f"【{name}】\n")
+            self.text_steps.insert(tk.END, f"▶ {name}:\n")
             for line in formula.split("\n"):
-                self.text_steps.insert(tk.END, f"  {line}\n")
+                self.text_steps.insert(tk.END, f"   {line}\n")
             self.text_steps.insert(tk.END, "\n")
 
-        self.text_steps.insert(tk.END, "═══════════════════════════════\n")
-        self.text_steps.insert(tk.END, "         计 算 步 骤\n")
-        self.text_steps.insert(tk.END, "═══════════════════════════════\n")
+        self.text_steps.insert(tk.END, "【 计 算 步 骤 】\n")
+        self.text_steps.insert(tk.END, "───────────────────────────────\n")
         for step in result.calculation_steps:
-            self.text_steps.insert(tk.END, f"\n▶ {step.name}\n")
+            self.text_steps.insert(tk.END, f"▶ {step.name}\n")
             self.text_steps.insert(tk.END, f"  公式: {step.formula}\n")
             inputs_str = ", ".join(
                 [f"{k}={v:.6g}" for k, v in step.input_values.items()]
             )
             self.text_steps.insert(tk.END, f"  输入: {inputs_str}\n")
             unit_str = f" {step.unit}" if step.unit else ""
-            self.text_steps.insert(tk.END, f"  结果: {step.result:.6g}{unit_str}\n")
+            self.text_steps.insert(tk.END, f"  结果: {step.result:.6g}{unit_str}\n\n")
 
         self.text_steps.config(state="disabled")
 
